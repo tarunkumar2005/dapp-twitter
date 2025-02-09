@@ -8,6 +8,7 @@ interface TwitterState {
   loading: boolean;
   hasMoreTweets: boolean;
   page: number;
+  username?: string;
 }
 
 const initialState: TwitterState = {
@@ -15,6 +16,7 @@ const initialState: TwitterState = {
   loading: false,
   hasMoreTweets: true,
   page: 1,
+  username: "",
 };
 
 export const createTweet = createAsyncThunk<void, { tweetContent: string; contract: Twitter }>(
@@ -187,6 +189,67 @@ export const deleteTweet = createAsyncThunk<string, { tweetId: string, contract:
   } 
 )
 
+export const isUsernameAvailable = createAsyncThunk<boolean, { username: string, contract: Twitter }>(
+  'twitter/isUsernameAvailable',
+  async ({ username, contract }) => {{
+    try {
+      if (!contract) {
+        throw new Error('Contract not initialized');
+      }
+
+      const available = await contract.isUsernameAvailable(username);
+      return available;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }}
+)
+
+export const getUserName = createAsyncThunk<string, { account: string, contract: Twitter }>(
+  'twitter/getUserName',
+  async ({ account, contract }) => {
+    try {
+      if (!contract) {
+        throw new Error('Contract not initialized');
+      }
+
+      const username = await contract.getUserName(account);
+      return username;
+    } catch (error) {
+      console.error(error);
+      return "";
+    }
+  }
+)
+
+export const setUserName = createAsyncThunk<string, { username: string, contract: Twitter }>(
+  'twitter/setUserName',
+  async ({ username, contract }) => {
+    try {
+      if (!contract) {
+        throw new Error('Contract not initialized');
+      }
+
+      const ts = await contract.setUserName(username);
+      await ts.wait();
+
+      toast({
+        title: "Username Set",
+        description: "Your username has been successfully set!",
+      });
+      return username;
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error setting username",
+        variant: "destructive",
+      });
+      return "Anonymous";
+    }
+  }
+)
+
 const twitterSlice = createSlice({
   name: "twitter",
   initialState,
@@ -267,6 +330,35 @@ const twitterSlice = createSlice({
         state.tweets = state.tweets.filter((tweet) => tweet.id !== action.payload);
       })
       .addCase(deleteTweet.rejected, (state) => {
+        state.loading = false;
+      })
+      .addCase(isUsernameAvailable.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(isUsernameAvailable.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(isUsernameAvailable.rejected, (state) => {
+        state.loading = false;
+      })
+      .addCase(getUserName.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getUserName.fulfilled, (state, action) => {
+        state.loading = false;
+        state.username = action.payload;
+      })
+      .addCase(getUserName.rejected, (state) => {
+        state.loading = false;
+      })
+      .addCase(setUserName.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(setUserName.fulfilled, (state, action) => {
+        state.loading = false;
+        state.username = action.payload;
+      })
+      .addCase(setUserName.rejected, (state) => {
         state.loading = false;
       })
   }

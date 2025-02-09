@@ -9,9 +9,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserCircle } from "lucide-react";
+import { useAppSelector } from "@/hooks/use-store";
 
 export function WalletButton() {
-  const { username, account, availableAccounts, connectWallet, disconnectWallet, selectAccount, loading } = useWeb3();
+  const username = useAppSelector((state) => state.twitter.username);
+  const { account, availableAccounts, connectWallet, disconnectWallet, selectAccount, loading } = useWeb3();
 
   if (loading) {
     return (

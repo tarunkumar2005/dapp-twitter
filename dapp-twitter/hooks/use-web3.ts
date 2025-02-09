@@ -3,7 +3,6 @@ import { ethers, BrowserProvider } from "ethers";
 import { Twitter } from "@/types/TwitterContract";
 import TwitterAbi from "@/lib/abi.json";
 import { toast } from "./use-toast";
-import { generateRandomUserName } from "@/lib/utils";
 
 declare global {
   interface Window {
@@ -17,7 +16,6 @@ export interface Web3Return {
   account: string | null;
   availableAccounts: string[];
   contract: Twitter | null;
-  username: string | null;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => Promise<void>;
   selectAccount: (account: string) => void;
@@ -30,7 +28,6 @@ export const useWeb3 = (): Web3Return => {
   const [account, setAccount] = useState<string | null>(null);
   const [availableAccounts, setAvailableAccounts] = useState<string[]>([]);
   const [contract, setContract] = useState<Twitter | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   const handleAccountsChanged = useCallback((accounts: string[]) => {
@@ -42,57 +39,7 @@ export const useWeb3 = (): Web3Return => {
     } else {
       setAccount(null);
     }
-  }, []);
-
-  useEffect(() => {
-    let isCancelled = false; // used to cancel if the component unmounts
-    // If any of these values are missing, we don't run the setup.
-    if (!account || !provider || !contract) return;
-  
-    const setupUsername = async () => {
-      try {
-        // First, check if the user already has a name.
-        const currentName: string = await contract.getUserName(account);
-        if (currentName && currentName.trim().length > 0) {
-          // Username already set—no need to set it again.
-          setUsername(currentName);
-          return;
-        }
-  
-        // Try to generate an available random username.
-        const maxAttempts = 5;
-        let randomName = "";
-        let available = false;
-        for (let i = 0; i < maxAttempts; i++) {
-          randomName = generateRandomUserName();
-          available = await contract.isUsernameAvailable(randomName);
-          if (available) break;
-        }
-  
-        if (!available) {
-          console.error("No available username found after several attempts.");
-          setUsername("Anonymous");
-          return;
-        }
-  
-        // Attempt to set the username.
-        const tx = await contract.setUserName(randomName);
-        await tx.wait();
-  
-        if (!isCancelled) {
-          setUsername(randomName);
-        }
-      } catch (error) {
-        console.error("Error setting up username:", error);
-      }
-    };
-  
-    setupUsername();
-  
-    return () => {
-      isCancelled = true;
-    };
-  }, [account, provider, contract]);  
+  }, []); 
 
   useEffect(() => {
     if (window.ethereum) {
@@ -194,8 +141,8 @@ export const useWeb3 = (): Web3Return => {
   }, []);
 
   const web3Memo = useMemo(
-    () => ({ provider, signer, account, availableAccounts, contract, username }),
-    [provider, signer, account, availableAccounts, contract, username]
+    () => ({ provider, signer, account, availableAccounts, contract }),
+    [provider, signer, account, availableAccounts, contract]
   );
 
   return { ...web3Memo, connectWallet, disconnectWallet, selectAccount, loading };
